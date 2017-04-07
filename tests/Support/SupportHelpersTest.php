@@ -1,9 +1,14 @@
 <?php
 
+namespace Illuminate\Tests\Support;
+
+use stdClass;
+use ArrayAccess;
 use Mockery as m;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\TestCase;
 
-class SupportHelpersTest extends PHPUnit_Framework_TestCase
+class SupportHelpersTest extends TestCase
 {
     public function tearDown()
     {
@@ -640,6 +645,17 @@ class SupportHelpersTest extends PHPUnit_Framework_TestCase
         ));
     }
 
+    public function testArrayWrap()
+    {
+        $string = 'a';
+        $array = ['a'];
+        $object = new stdClass;
+        $object->value = 'a';
+        $this->assertEquals(['a'], array_wrap($string));
+        $this->assertEquals($array, array_wrap($array));
+        $this->assertEquals([$object], array_wrap($object));
+    }
+
     public function testHead()
     {
         $array = ['a', 'b', 'c'];
@@ -655,17 +671,17 @@ class SupportHelpersTest extends PHPUnit_Framework_TestCase
     public function testClassUsesRecursiveShouldReturnTraitsOnParentClasses()
     {
         $this->assertEquals([
-            'SupportTestTraitOne' => 'SupportTestTraitOne',
-            'SupportTestTraitTwo' => 'SupportTestTraitTwo',
+            'Illuminate\Tests\Support\SupportTestTraitOne' => 'Illuminate\Tests\Support\SupportTestTraitOne',
+            'Illuminate\Tests\Support\SupportTestTraitTwo' => 'Illuminate\Tests\Support\SupportTestTraitTwo',
         ],
-        class_uses_recursive('SupportTestClassTwo'));
+        class_uses_recursive('Illuminate\Tests\Support\SupportTestClassTwo'));
     }
 
     public function testClassUsesRecursiveAcceptsObject()
     {
         $this->assertEquals([
-            'SupportTestTraitOne' => 'SupportTestTraitOne',
-            'SupportTestTraitTwo' => 'SupportTestTraitTwo',
+            'Illuminate\Tests\Support\SupportTestTraitOne' => 'Illuminate\Tests\Support\SupportTestTraitOne',
+            'Illuminate\Tests\Support\SupportTestTraitTwo' => 'Illuminate\Tests\Support\SupportTestTraitTwo',
         ],
         class_uses_recursive(new SupportTestClassTwo));
     }

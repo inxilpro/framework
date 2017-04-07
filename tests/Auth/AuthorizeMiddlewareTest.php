@@ -1,19 +1,22 @@
 <?php
 
+namespace Illuminate\Tests\Auth;
+
+use stdClass;
 use Mockery as m;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Auth\Access\Gate;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Container\Container;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Contracts\Routing\Registrar;
 use Illuminate\Contracts\Auth\Factory as Auth;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Contracts\Auth\Access\Gate as GateContract;
 
-class AuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
+class AuthorizeMiddlewareTest extends TestCase
 {
     protected $container;
     protected $user;
@@ -51,10 +54,11 @@ class AuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
         });
     }
 
+    /**
+     * @expectedException \Illuminate\Auth\Access\AuthorizationException
+     */
     public function testSimpleAbilityUnauthorized()
     {
-        $this->setExpectedException(AuthorizationException::class);
-
         $this->gate()->define('view-dashboard', function ($user, $additional = null) {
             $this->assertNull($additional);
 
@@ -89,10 +93,11 @@ class AuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($response->content(), 'success');
     }
 
+    /**
+     * @expectedException \Illuminate\Auth\Access\AuthorizationException
+     */
     public function testModelTypeUnauthorized()
     {
-        $this->setExpectedException(AuthorizationException::class);
-
         $this->gate()->define('create', function ($user, $model) {
             $this->assertEquals($model, 'App\User');
 
@@ -129,10 +134,11 @@ class AuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($response->content(), 'success');
     }
 
+    /**
+     * @expectedException \Illuminate\Auth\Access\AuthorizationException
+     */
     public function testModelUnauthorized()
     {
-        $this->setExpectedException(AuthorizationException::class);
-
         $post = new stdClass;
 
         $this->router->bind('post', function () use ($post) {
@@ -179,6 +185,28 @@ class AuthorizeMiddlewareTest extends PHPUnit_Framework_TestCase
         $response = $this->router->dispatch(Request::create('posts/1/edit', 'GET'));
 
         $this->assertEquals($response->content(), 'success');
+    }
+
+    public function testModelInstanceAsParameter()
+    {
+        $instance = m::mock(\Illuminate\Database\Eloquent\Model::class);
+
+        $this->gate()->define('success', function ($user, $model) use ($instance) {
+            $this->assertSame($model, $instance);
+
+            return true;
+        });
+
+        $request = m::mock(Request::class);
+
+        $nextParam = null;
+
+        $next = function ($param) use (&$nextParam) {
+            $nextParam = $param;
+        };
+
+        (new Authorize($this->container->make(Auth::class), $this->gate()))
+            ->handle($request, $next, 'success', $instance);
     }
 
     /**

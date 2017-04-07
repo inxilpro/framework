@@ -1,11 +1,15 @@
 <?php
 
+namespace Illuminate\Tests\Database;
+
 use Mockery as m;
-use Illuminate\Database\Connection;
+use ReflectionProperty;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Connectors\ConnectionFactory;
 
-class DatabaseConnectionFactoryTest extends PHPUnit_Framework_TestCase
+class DatabaseConnectionFactoryTest extends TestCase
 {
     protected $db;
 

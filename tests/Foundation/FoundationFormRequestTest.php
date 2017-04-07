@@ -1,9 +1,12 @@
 <?php
 
+namespace Illuminate\Tests\Foundation;
+
 use Mockery as m;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Container\Container;
 
-class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
+class FoundationFormRequestTest extends TestCase
 {
     public function tearDown()
     {
@@ -29,7 +32,7 @@ class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
      */
     public function testValidateFunctionThrowsValidationExceptionIfValidationFails()
     {
-        $request = m::mock('FoundationTestFormRequestStub[response]');
+        $request = m::mock('Illuminate\Tests\Foundation\FoundationTestFormRequestStub[response]');
         $request->initialize(['name' => null]);
         $request->setContainer($container = new Container);
         $factory = m::mock('Illuminate\Validation\Factory');
@@ -40,17 +43,17 @@ class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
         $validator->shouldReceive('passes')->once()->andReturn(false);
         $validator->shouldReceive('getMessageBag')->once()->andReturn($messages = m::mock('Illuminate\Support\MessageBag'));
         $messages->shouldReceive('toArray')->once()->andReturn(['name' => ['Name required']]);
-        $request->shouldReceive('response')->once()->andReturn(new Illuminate\Http\Response);
+        $request->shouldReceive('response')->once()->andReturn(new \Illuminate\Http\Response);
 
         $request->validate($factory);
     }
 
     /**
-     * @expectedException \Illuminate\Http\Exception\HttpResponseException
+     * @expectedException \Illuminate\Auth\Access\AuthorizationException
      */
     public function testValidateFunctionThrowsHttpResponseExceptionIfAuthorizationFails()
     {
-        $request = m::mock('FoundationTestFormRequestForbiddenStub[forbiddenResponse]');
+        $request = m::mock('Illuminate\Tests\Foundation\FoundationTestFormRequestForbiddenStub[forbiddenResponse]');
         $request->initialize(['name' => null]);
         $request->setContainer($container = new Container);
         $factory = m::mock('Illuminate\Validation\Factory');
@@ -59,7 +62,6 @@ class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
         );
         $container->instance('Illuminate\Contracts\Validation\Factory', $factory);
         $validator->shouldReceive('passes')->never();
-        $request->shouldReceive('forbiddenResponse')->once()->andReturn(new Illuminate\Http\Response);
 
         $request->validate($factory);
     }
@@ -76,9 +78,23 @@ class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
 
         $request->response(['errors']);
     }
+
+    public function testValidateFunctionRunsBeforeValidationFunction()
+    {
+        $request = FoundationTestFormRequestHooks::create('/', 'GET', ['name' => 'abigail']);
+        $request->setContainer($container = new Container);
+        $factory = m::mock('Illuminate\Validation\Factory');
+        $factory->shouldReceive('make')->once()->with(['name' => 'Taylor'], ['name' => 'required'], [], [])->andReturn(
+            $validator = m::mock('Illuminate\Validation\Validator')
+        );
+        $container->instance('Illuminate\Contracts\Validation\Factory', $factory);
+        $validator->shouldReceive('passes')->once()->andReturn(true);
+
+        $request->validate($factory);
+    }
 }
 
-class FoundationTestFormRequestStub extends Illuminate\Foundation\Http\FormRequest
+class FoundationTestFormRequestStub extends \Illuminate\Foundation\Http\FormRequest
 {
     public function rules()
     {
@@ -91,7 +107,7 @@ class FoundationTestFormRequestStub extends Illuminate\Foundation\Http\FormReque
     }
 }
 
-class FoundationTestFormRequestForbiddenStub extends Illuminate\Foundation\Http\FormRequest
+class FoundationTestFormRequestForbiddenStub extends \Illuminate\Foundation\Http\FormRequest
 {
     public function rules()
     {
@@ -101,5 +117,22 @@ class FoundationTestFormRequestForbiddenStub extends Illuminate\Foundation\Http\
     public function authorize()
     {
         return false;
+    }
+}
+class FoundationTestFormRequestHooks extends \Illuminate\Foundation\Http\FormRequest
+{
+    public function rules()
+    {
+        return ['name' => 'required'];
+    }
+
+    public function authorize()
+    {
+        return true;
+    }
+
+    public function prepareForValidation()
+    {
+        $this->replace(['name' => 'Taylor']);
     }
 }

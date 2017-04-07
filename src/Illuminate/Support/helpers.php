@@ -302,6 +302,19 @@ if (! function_exists('array_where')) {
     }
 }
 
+if (! function_exists('array_wrap')) {
+    /**
+     * If the given value is not an array, wrap it in one.
+     *
+     * @param  mixed  $value
+     * @return array
+     */
+    function array_wrap($value)
+    {
+        return Arr::wrap($value);
+    }
+}
+
 if (! function_exists('camel_case')) {
     /**
      * Convert a value to camel case.
@@ -547,6 +560,19 @@ if (! function_exists('head')) {
     }
 }
 
+if (! function_exists('kebab_case')) {
+    /**
+     * Convert a string to kebab case.
+     *
+     * @param  string  $value
+     * @return string
+     */
+    function kebab_case($value)
+    {
+        return Str::kebab($value);
+    }
+}
+
 if (! function_exists('last')) {
     /**
      * Get the last element from an array.
@@ -614,6 +640,8 @@ if (! function_exists('retry')) {
      * @param  callable  $callback
      * @param  int  $sleep
      * @return mixed
+     *
+     * @throws \Exception
      */
     function retry($times, callable $callback, $sleep = 0)
     {

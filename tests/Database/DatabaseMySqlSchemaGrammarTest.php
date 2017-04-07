@@ -1,9 +1,12 @@
 <?php
 
+namespace Illuminate\Tests\Database;
+
 use Mockery as m;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Database\Schema\Blueprint;
 
-class DatabaseMySqlSchemaGrammarTest extends PHPUnit_Framework_TestCase
+class DatabaseMySqlSchemaGrammarTest extends TestCase
 {
     public function tearDown()
     {
@@ -357,7 +360,7 @@ class DatabaseMySqlSchemaGrammarTest extends PHPUnit_Framework_TestCase
         $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
 
         $this->assertEquals(1, count($statements));
-        $this->assertEquals('alter table `products` add `price` int not null, add `discounted_virtual` int as (price - 5) not null, add `discounted_stored` int as (price - 5) stored not null', $statements[0]);
+        $this->assertEquals('alter table `products` add `price` int not null, add `discounted_virtual` int as (price - 5), add `discounted_stored` int as (price - 5) stored', $statements[0]);
     }
 
     public function testAddingString()
@@ -384,7 +387,7 @@ class DatabaseMySqlSchemaGrammarTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('alter table `users` add `foo` varchar(100) null default \'bar\'', $statements[0]);
 
         $blueprint = new Blueprint('users');
-        $blueprint->string('foo', 100)->nullable()->default(new Illuminate\Database\Query\Expression('CURRENT TIMESTAMP'));
+        $blueprint->string('foo', 100)->nullable()->default(new \Illuminate\Database\Query\Expression('CURRENT TIMESTAMP'));
         $statements = $blueprint->toSql($this->getConnection(), $this->getGrammar());
 
         $this->assertEquals(1, count($statements));
@@ -733,6 +736,6 @@ class DatabaseMySqlSchemaGrammarTest extends PHPUnit_Framework_TestCase
 
     public function getGrammar()
     {
-        return new Illuminate\Database\Schema\Grammars\MySqlGrammar;
+        return new \Illuminate\Database\Schema\Grammars\MySqlGrammar;
     }
 }

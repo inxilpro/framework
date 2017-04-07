@@ -1,11 +1,18 @@
 <?php
 
+namespace Illuminate\Tests\Database;
+
+use stdClass;
 use Mockery as m;
+use ReflectionClass;
+use PHPUnit\Framework\TestCase;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as BaseCollection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
+class DatabaseEloquentBelongsToManyTest extends TestCase
 {
     public function tearDown()
     {
@@ -321,7 +328,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
     public function testFirstMethod()
     {
         $relation = m::mock('Illuminate\Database\Eloquent\Relations\BelongsToMany[get]', $this->getRelationArguments());
-        $relation->shouldReceive('get')->once()->andReturn(new Illuminate\Database\Eloquent\Collection([new StdClass]));
+        $relation->shouldReceive('get')->once()->andReturn(new \Illuminate\Database\Eloquent\Collection([new StdClass]));
         $relation->shouldReceive('take')->with(1)->once()->andReturn($relation);
 
         $this->assertInstanceOf(StdClass::class, $relation->first());
@@ -342,7 +349,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
     public function testFindManyMethod()
     {
         $relation = m::mock('Illuminate\Database\Eloquent\Relations\BelongsToMany[get]', $this->getRelationArguments());
-        $relation->shouldReceive('get')->once()->andReturn(new Illuminate\Database\Eloquent\Collection([new StdClass, new StdClass]));
+        $relation->shouldReceive('get')->once()->andReturn(new Collection([new StdClass, new StdClass]));
         $relation->shouldReceive('whereIn')->with('roles.id', ['foo', 'bar'])->once()->andReturn($relation);
 
         $related = $relation->getRelated();
@@ -365,32 +372,34 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($model, $relation->create(['attributes'], ['joining']));
     }
 
+    /**
+     * @expectedException \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
     public function testFindOrFailThrowsException()
     {
         $relation = $this->getMockBuilder('Illuminate\Database\Eloquent\Relations\BelongsToMany')->setMethods(['find'])->setConstructorArgs($this->getRelationArguments())->getMock();
         $relation->expects($this->once())->method('find')->with('foo')->will($this->returnValue(null));
 
-        $this->setExpectedException(Illuminate\Database\Eloquent\ModelNotFoundException::class);
-
         try {
             $relation->findOrFail('foo');
-        } catch (Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             $this->assertNotEmpty($e->getModel());
 
             throw $e;
         }
     }
 
+    /**
+     * @expectedException \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
     public function testFirstOrFailThrowsException()
     {
         $relation = $this->getMockBuilder('Illuminate\Database\Eloquent\Relations\BelongsToMany')->setMethods(['first'])->setConstructorArgs($this->getRelationArguments())->getMock();
         $relation->expects($this->once())->method('first')->with(['id' => 'foo'])->will($this->returnValue(null));
 
-        $this->setExpectedException(Illuminate\Database\Eloquent\ModelNotFoundException::class);
-
         try {
             $relation->firstOrFail(['id' => 'foo']);
-        } catch (Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             $this->assertNotEmpty($e->getModel());
 
             throw $e;
@@ -626,7 +635,7 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
         $relation->touchIfTouching();
     }
 
-    public function testSyncMethodConvertsCollectionToArrayOfKeys()
+    public function testSyncMethodConvertsEloquentCollectionToArrayOfKeys()
     {
         $relation = $this->getMockBuilder('Illuminate\Database\Eloquent\Relations\BelongsToMany')->setMethods(['attach', 'detach', 'touchIfTouching', 'formatRecordsList'])->setConstructorArgs($this->getRelationArguments())->getMock();
         $query = m::mock('stdClass');
@@ -641,6 +650,21 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
             m::mock(['getKey' => 2]),
             m::mock(['getKey' => 3]),
         ]);
+        $relation->expects($this->once())->method('formatRecordsList')->with([1, 2, 3])->will($this->returnValue([1 => [], 2 => [], 3 => []]));
+        $relation->sync($collection);
+    }
+
+    public function testSyncMethodConvertsBaseCollectionToArrayOfKeys()
+    {
+        $relation = $this->getMockBuilder('Illuminate\Database\Eloquent\Relations\BelongsToMany')->setMethods(['attach', 'detach', 'touchIfTouching', 'formatRecordsList'])->setConstructorArgs($this->getRelationArguments())->getMock();
+        $query = m::mock('stdClass');
+        $query->shouldReceive('from')->once()->with('user_role')->andReturn($query);
+        $query->shouldReceive('where')->once()->with('user_id', 1)->andReturn($query);
+        $relation->getQuery()->shouldReceive('getQuery')->andReturn($mockQueryBuilder = m::mock('StdClass'));
+        $mockQueryBuilder->shouldReceive('newQuery')->once()->andReturn($query);
+        $query->shouldReceive('pluck')->once()->with('role_id')->andReturn(new BaseCollection([1, 2, 3]));
+
+        $collection = new BaseCollection([1, 2, 3]);
         $relation->expects($this->once())->method('formatRecordsList')->with([1, 2, 3])->will($this->returnValue([1 => [], 2 => [], 3 => []]));
         $relation->sync($collection);
     }
@@ -708,12 +732,12 @@ class DatabaseEloquentBelongsToManyTest extends PHPUnit_Framework_TestCase
     }
 }
 
-class EloquentBelongsToManyModelStub extends Illuminate\Database\Eloquent\Model
+class EloquentBelongsToManyModelStub extends Model
 {
     protected $guarded = [];
 }
 
-class EloquentBelongsToManyModelPivotStub extends Illuminate\Database\Eloquent\Model
+class EloquentBelongsToManyModelPivotStub extends Model
 {
     public $pivot;
 

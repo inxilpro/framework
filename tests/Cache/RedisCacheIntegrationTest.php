@@ -1,10 +1,14 @@
 <?php
 
+namespace Illuminate\Tests\Cache;
+
+use Mockery as m;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Cache\RedisStore;
 use Illuminate\Cache\Repository;
-use Mockery as m;
+use Illuminate\Tests\Redis\InteractsWithRedis;
 
-class RedisCacheTest extends PHPUnit_Framework_TestCase
+class RedisCacheIntegrationTest extends TestCase
 {
     use InteractsWithRedis;
 
@@ -21,31 +25,46 @@ class RedisCacheTest extends PHPUnit_Framework_TestCase
         $this->tearDownRedis();
     }
 
-    public function testRedisCacheAddTwice()
+    /**
+     * @dataProvider redisDriverProvider
+     *
+     * @param string $driver
+     */
+    public function testRedisCacheAddTwice($driver)
     {
-        $store = new RedisStore($this->redis);
+        $store = new RedisStore($this->redis[$driver]);
         $repository = new Repository($store);
         $this->assertTrue($repository->add('k', 'v', 60));
         $this->assertFalse($repository->add('k', 'v', 60));
+        $this->assertGreaterThan(3500, $this->redis[$driver]->connection()->ttl('k'));
     }
 
     /**
      * Breaking change.
+     *
+     * @dataProvider redisDriverProvider
+     *
+     * @param string $driver
      */
-    public function testRedisCacheAddFalse()
+    public function testRedisCacheAddFalse($driver)
     {
-        $store = new RedisStore($this->redis);
+        $store = new RedisStore($this->redis[$driver]);
         $repository = new Repository($store);
         $repository->forever('k', false);
         $this->assertFalse($repository->add('k', 'v', 60));
+        $this->assertEquals(-1, $this->redis[$driver]->connection()->ttl('k'));
     }
 
     /**
      * Breaking change.
+     *
+     * @dataProvider redisDriverProvider
+     *
+     * @param string $driver
      */
-    public function testRedisCacheAddNull()
+    public function testRedisCacheAddNull($driver)
     {
-        $store = new RedisStore($this->redis);
+        $store = new RedisStore($this->redis[$driver]);
         $repository = new Repository($store);
         $repository->forever('k', null);
         $this->assertFalse($repository->add('k', 'v', 60));

@@ -1,8 +1,11 @@
 <?php
 
-use Illuminate\Console\Parser;
+namespace Illuminate\Tests\Console;
 
-class ConsoleParserTest extends PHPUnit_Framework_TestCase
+use Illuminate\Console\Parser;
+use PHPUnit\Framework\TestCase;
+
+class ConsoleParserTest extends TestCase
 {
     public function testBasicParameterParsing()
     {
@@ -103,5 +106,23 @@ class ConsoleParserTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('The option description.', $results[2][0]->getDescription());
         $this->assertTrue($results[2][0]->acceptValue());
         $this->assertTrue($results[2][0]->isArray());
+    }
+
+    public function testArgumentDefaultValue()
+    {
+        $results = Parser::parse('command:name {argument= : The argument description.}');
+        $this->assertNull($results[1][0]->getDefault());
+
+        $results = Parser::parse('command:name {argument=default : The argument description.}');
+        $this->assertSame('default', $results[1][0]->getDefault());
+    }
+
+    public function testOptionDefaultValue()
+    {
+        $results = Parser::parse('command:name {--option= : The option description.}');
+        $this->assertNull($results[2][0]->getDefault());
+
+        $results = Parser::parse('command:name {--option=default : The option description.}');
+        $this->assertSame('default', $results[2][0]->getDefault());
     }
 }

@@ -1,15 +1,18 @@
 <?php
 
+namespace Illuminate\Tests\Database;
+
 use Carbon\Carbon;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Database\Connection;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Capsule\Manager as DB;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Database\Eloquent\Model as Eloquent;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class DatabaseEloquentSoftDeletesIntegrationTest extends PHPUnit_Framework_TestCase
+class DatabaseEloquentSoftDeletesIntegrationTest extends TestCase
 {
     public function setUp()
     {

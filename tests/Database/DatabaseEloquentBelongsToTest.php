@@ -1,10 +1,13 @@
 <?php
 
+namespace Illuminate\Tests\Database;
+
 use Mockery as m;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class DatabaseEloquentBelongsToTest extends PHPUnit_Framework_TestCase
+class DatabaseEloquentBelongsToTest extends TestCase
 {
     public function tearDown()
     {
@@ -27,6 +30,14 @@ class DatabaseEloquentBelongsToTest extends PHPUnit_Framework_TestCase
         $relation = $this->getRelation();
         $relation->getQuery()->shouldReceive('whereIn')->once()->with('relation.id', ['foreign.value', 'foreign.value.two']);
         $models = [new EloquentBelongsToModelStub, new EloquentBelongsToModelStub, new AnotherEloquentBelongsToModelStub];
+        $relation->addEagerConstraints($models);
+    }
+
+    public function testIdsInEagerConstraintsCanBeZero()
+    {
+        $relation = $this->getRelation();
+        $relation->getQuery()->shouldReceive('whereIn')->once()->with('relation.id', ['foreign.value', 0]);
+        $models = [new EloquentBelongsToModelStub, new EloquentBelongsToModelStubWithZeroId];
         $relation->addEagerConstraints($models);
     }
 
@@ -97,6 +108,14 @@ class DatabaseEloquentBelongsToTest extends PHPUnit_Framework_TestCase
         $relation->addEagerConstraints($models);
     }
 
+    public function testDefaultEagerConstraintsWhenIncrementingAndNonIntKeyType()
+    {
+        $relation = $this->getRelation(null, false, 'string');
+        $relation->getQuery()->shouldReceive('whereIn')->once()->with('relation.id', m::mustBe([null]));
+        $models = [new MissingEloquentBelongsToModelStub, new MissingEloquentBelongsToModelStub];
+        $relation->addEagerConstraints($models);
+    }
+
     public function testDefaultEagerConstraintsWhenNotIncrementing()
     {
         $relation = $this->getRelation(null, false);
@@ -105,12 +124,13 @@ class DatabaseEloquentBelongsToTest extends PHPUnit_Framework_TestCase
         $relation->addEagerConstraints($models);
     }
 
-    protected function getRelation($parent = null, $incrementing = true)
+    protected function getRelation($parent = null, $incrementing = true, $keyType = 'int')
     {
         $builder = m::mock('Illuminate\Database\Eloquent\Builder');
         $builder->shouldReceive('where')->with('relation.id', '=', 'foreign.value');
         $related = m::mock('Illuminate\Database\Eloquent\Model');
         $related->incrementing = $incrementing;
+        $related->shouldReceive('getKeyType')->andReturn($keyType);
         $related->shouldReceive('getIncrementing')->andReturn($incrementing);
         $related->shouldReceive('getKeyName')->andReturn('id');
         $related->shouldReceive('getTable')->andReturn('relation');
@@ -121,17 +141,22 @@ class DatabaseEloquentBelongsToTest extends PHPUnit_Framework_TestCase
     }
 }
 
-class EloquentBelongsToModelStub extends Illuminate\Database\Eloquent\Model
+class EloquentBelongsToModelStub extends \Illuminate\Database\Eloquent\Model
 {
     public $foreign_key = 'foreign.value';
 }
 
-class AnotherEloquentBelongsToModelStub extends Illuminate\Database\Eloquent\Model
+class AnotherEloquentBelongsToModelStub extends \Illuminate\Database\Eloquent\Model
 {
     public $foreign_key = 'foreign.value.two';
 }
 
-class MissingEloquentBelongsToModelStub extends Illuminate\Database\Eloquent\Model
+class EloquentBelongsToModelStubWithZeroId extends \Illuminate\Database\Eloquent\Model
 {
-    public $foreign_key = null;
+    public $foreign_key = 0;
+}
+
+class MissingEloquentBelongsToModelStub extends \Illuminate\Database\Eloquent\Model
+{
+    public $foreign_key;
 }

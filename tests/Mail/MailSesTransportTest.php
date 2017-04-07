@@ -1,12 +1,15 @@
 <?php
 
-use Aws\Ses\SesClient;
-use Illuminate\Foundation\Application;
-use Illuminate\Mail\TransportManager;
-use Illuminate\Mail\Transport\SesTransport;
-use Illuminate\Support\Collection;
+namespace Illuminate\Tests\Mail;
 
-class MailSesTransportTest extends PHPUnit_Framework_TestCase
+use Aws\Ses\SesClient;
+use PHPUnit\Framework\TestCase;
+use Illuminate\Support\Collection;
+use Illuminate\Mail\TransportManager;
+use Illuminate\Foundation\Application;
+use Illuminate\Mail\Transport\SesTransport;
+
+class MailSesTransportTest extends TestCase
 {
     public function testGetTransport()
     {
@@ -34,7 +37,7 @@ class MailSesTransportTest extends PHPUnit_Framework_TestCase
 
     public function testSend()
     {
-        $message = new Swift_Message('Foo subject', 'Bar body');
+        $message = new \Swift_Message('Foo subject', 'Bar body');
         $message->setSender('myself@example.com');
         $message->setTo('me@example.com');
         $message->setBcc('you@example.com');
@@ -45,13 +48,39 @@ class MailSesTransportTest extends PHPUnit_Framework_TestCase
             ->getMock();
         $transport = new SesTransport($client);
 
+        // Generate a messageId for our mock to return to ensure that the post-sent message
+        // has X-SES-Message-ID in its headers
+        $messageId = str_random(32);
+        $sendRawEmailMock = new sendRawEmailMock($messageId);
         $client->expects($this->once())
             ->method('sendRawEmail')
             ->with($this->equalTo([
                 'Source' => 'myself@example.com',
                 'RawMessage' => ['Data' => (string) $message],
-            ]));
+            ]))
+            ->willReturn($sendRawEmailMock);
 
         $transport->send($message);
+        $this->assertEquals($messageId, $message->getHeaders()->get('X-SES-Message-ID')->getFieldBody());
+    }
+}
+
+class sendRawEmailMock
+{
+    protected $getResponse;
+
+    public function __construct($responseValue)
+    {
+        $this->getResponse = $responseValue;
+    }
+
+    /**
+     * Mock the get() call for the sendRawEmail response.
+     * @param  [type] $key [description]
+     * @return [type]      [description]
+     */
+    public function get($key)
+    {
+        return $this->getResponse;
     }
 }

@@ -48,7 +48,7 @@ trait AuthorizesRequests
      */
     protected function parseAbilityAndArguments($ability, $arguments)
     {
-        if (is_string($ability)) {
+        if (is_string($ability) && strpos($ability, '\\') === false) {
             return [$ability, $arguments];
         }
 
@@ -81,7 +81,7 @@ trait AuthorizesRequests
      */
     public function authorizeResource($model, $parameter = null, array $options = [], $request = null)
     {
-        $parameter = $parameter ?: strtolower(class_basename($model));
+        $parameter = $parameter ?: lcfirst(class_basename($model));
 
         $middleware = [];
 

@@ -1,15 +1,19 @@
 <?php
 
+namespace Illuminate\Tests\Auth;
+
+use stdClass;
 use Mockery as m;
 use Illuminate\Http\Request;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Container\Container;
 use Illuminate\Config\Repository as Config;
-use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Middleware\Authenticate;
 
-class AuthenticateMiddlewareTest extends PHPUnit_Framework_TestCase
+class AuthenticateMiddlewareTest extends TestCase
 {
     protected $auth;
 
@@ -29,10 +33,11 @@ class AuthenticateMiddlewareTest extends PHPUnit_Framework_TestCase
         });
     }
 
+    /**
+     * @expectedException \Illuminate\Auth\AuthenticationException
+     */
     public function testDefaultUnauthenticatedThrows()
     {
-        $this->setExpectedException(AuthenticationException::class);
-
         $this->registerAuthDriver('default', false);
 
         $this->authenticate();
@@ -73,10 +78,11 @@ class AuthenticateMiddlewareTest extends PHPUnit_Framework_TestCase
         $this->assertSame($secondary, $this->auth->guard());
     }
 
+    /**
+     * @expectedException \Illuminate\Auth\AuthenticationException
+     */
     public function testMultipleDriversUnauthenticatedThrows()
     {
-        $this->setExpectedException(AuthenticationException::class);
-
         $this->registerAuthDriver('default', false);
 
         $this->registerAuthDriver('secondary', false);
@@ -169,7 +175,7 @@ class AuthenticateMiddlewareTest extends PHPUnit_Framework_TestCase
      * @param  string  ...$guards
      * @return void
      *
-     * @throws \Illuminate\Auth\AuthenticationException
+     * @throws AuthenticationException
      */
     protected function authenticate(...$guards)
     {

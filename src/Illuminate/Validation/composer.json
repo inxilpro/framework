@@ -18,7 +18,8 @@
         "illuminate/container": "5.4.*",
         "illuminate/contracts": "5.4.*",
         "illuminate/support": "5.4.*",
-        "symfony/http-foundation": "3.2.*"
+        "illuminate/translation": "5.4.*",
+        "symfony/http-foundation": "~3.2"
     },
     "autoload": {
         "psr-4": {
@@ -32,6 +33,9 @@
     },
     "suggest": {
         "illuminate/database": "Required to use the database presence verifier (5.4.*)."
+    },
+    "config": {
+        "sort-packages": true
     },
     "minimum-stability": "dev"
 }

@@ -1,9 +1,14 @@
 <?php
 
+namespace Illuminate\Tests\Support;
+
+use stdClass;
+use ArrayObject;
 use Illuminate\Support\Arr;
+use PHPUnit\Framework\TestCase;
 use Illuminate\Support\Collection;
 
-class SupportArrTest extends PHPUnit_Framework_TestCase
+class SupportArrTest extends TestCase
 {
     public function testAccessible()
     {
@@ -299,6 +304,16 @@ class SupportArrTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(['Taylor', 'Abigail'], $array);
     }
 
+    public function testPluckWithArrayValue()
+    {
+        $array = [
+            ['developer' => ['name' => 'Taylor']],
+            ['developer' => ['name' => 'Abigail']],
+        ];
+        $array = Arr::pluck($array, ['developer', 'name']);
+        $this->assertEquals(['Taylor', 'Abigail'], $array);
+    }
+
     public function testPluckWithKeys()
     {
         $array = [
@@ -506,5 +521,16 @@ class SupportArrTest extends PHPUnit_Framework_TestCase
         $array = ['emails' => ['joe@example.com' => ['name' => 'Joe'], 'jane@localhost' => ['name' => 'Jane']]];
         Arr::forget($array, ['emails.joe@example.com', 'emails.jane@localhost']);
         $this->assertEquals(['emails' => ['joe@example.com' => ['name' => 'Joe']]], $array);
+    }
+
+    public function testWrap()
+    {
+        $string = 'a';
+        $array = ['a'];
+        $object = new stdClass;
+        $object->value = 'a';
+        $this->assertEquals(['a'], Arr::wrap($string));
+        $this->assertEquals($array, Arr::wrap($array));
+        $this->assertEquals([$object], Arr::wrap($object));
     }
 }

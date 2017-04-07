@@ -1,11 +1,15 @@
 <?php
 
-use Mockery as m;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Database\Eloquent\SoftDeletes;
+namespace Illuminate\Tests\Database;
 
-class DatabaseEloquentHasManyThroughTest extends PHPUnit_Framework_TestCase
+use stdClass;
+use Mockery as m;
+use PHPUnit\Framework\TestCase;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+
+class DatabaseEloquentHasManyThroughTest extends TestCase
 {
     public function tearDown()
     {
@@ -168,18 +172,19 @@ class DatabaseEloquentHasManyThroughTest extends PHPUnit_Framework_TestCase
     public function testFirstMethod()
     {
         $relation = m::mock('Illuminate\Database\Eloquent\Relations\HasManyThrough[get]', $this->getRelationArguments());
-        $relation->shouldReceive('get')->once()->andReturn(new Illuminate\Database\Eloquent\Collection(['first', 'second']));
+        $relation->shouldReceive('get')->once()->andReturn(new \Illuminate\Database\Eloquent\Collection(['first', 'second']));
         $relation->shouldReceive('take')->with(1)->once()->andReturn($relation);
 
         $this->assertEquals('first', $relation->first());
     }
 
+    /**
+     * @expectedException \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
     public function testFindOrFailThrowsException()
     {
         $relation = $this->getMockBuilder('Illuminate\Database\Eloquent\Relations\HasManyThrough')->setMethods(['find'])->setConstructorArgs($this->getRelationArguments())->getMock();
         $relation->expects($this->once())->method('find')->with('foo')->will($this->returnValue(null));
-
-        $this->setExpectedException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
 
         try {
             $relation->findOrFail('foo');
@@ -190,12 +195,13 @@ class DatabaseEloquentHasManyThroughTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    /**
+     * @expectedException \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
     public function testFirstOrFailThrowsException()
     {
         $relation = $this->getMockBuilder('Illuminate\Database\Eloquent\Relations\HasManyThrough')->setMethods(['first'])->setConstructorArgs($this->getRelationArguments())->getMock();
         $relation->expects($this->once())->method('first')->with(['id' => 'foo'])->will($this->returnValue(null));
-
-        $this->setExpectedException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
 
         try {
             $relation->firstOrFail(['id' => 'foo']);
@@ -208,26 +214,30 @@ class DatabaseEloquentHasManyThroughTest extends PHPUnit_Framework_TestCase
 
     public function testFindMethod()
     {
+        $returnValue = new StdClass;
+
         $relation = m::mock('Illuminate\Database\Eloquent\Relations\HasManyThrough[first]', $this->getRelationArguments());
         $relation->shouldReceive('where')->with('posts.id', '=', 'foo')->once()->andReturn($relation);
-        $relation->shouldReceive('first')->once()->andReturn(new StdClass);
+        $relation->shouldReceive('first')->once()->andReturn($returnValue);
 
         $related = $relation->getRelated();
         $related->shouldReceive('getQualifiedKeyName')->once()->andReturn('posts.id');
 
-        $relation->find('foo');
+        $this->assertEquals($returnValue, $relation->find('foo'));
     }
 
     public function testFindManyMethod()
     {
+        $returnValue = new \Illuminate\Database\Eloquent\Collection(['first', 'second']);
+
         $relation = m::mock('Illuminate\Database\Eloquent\Relations\HasManyThrough[get]', $this->getRelationArguments());
-        $relation->shouldReceive('get')->once()->andReturn(new Illuminate\Database\Eloquent\Collection(['first', 'second']));
+        $relation->shouldReceive('get')->once()->andReturn($returnValue);
         $relation->shouldReceive('whereIn')->with('posts.id', ['foo', 'bar'])->once()->andReturn($relation);
 
         $related = $relation->getRelated();
         $related->shouldReceive('getQualifiedKeyName')->once()->andReturn('posts.id');
 
-        $relation->findMany(['foo', 'bar']);
+        $this->assertEquals($returnValue, $relation->findMany(['foo', 'bar']));
     }
 
     public function testIgnoreSoftDeletingParent()
@@ -304,12 +314,12 @@ class DatabaseEloquentHasManyThroughTest extends PHPUnit_Framework_TestCase
     }
 }
 
-class EloquentHasManyThroughModelStub extends Illuminate\Database\Eloquent\Model
+class EloquentHasManyThroughModelStub extends \Illuminate\Database\Eloquent\Model
 {
     public $country_id = 'foreign.value';
 }
 
-class EloquentHasManyThroughSoftDeletingModelStub extends Illuminate\Database\Eloquent\Model
+class EloquentHasManyThroughSoftDeletingModelStub extends \Illuminate\Database\Eloquent\Model
 {
     use SoftDeletes;
     public $table = 'users';
