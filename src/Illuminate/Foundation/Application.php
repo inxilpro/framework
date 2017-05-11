@@ -574,6 +574,11 @@ class Application extends Container implements ApplicationContract, HttpKernelIn
             $provider->register();
         }
 
+        $registerEnv = 'register'.Str::studly($this['env']);
+        if (method_exists($provider, $registerEnv)) {
+            $provider->$registerEnv();
+        }
+
         $this->markAsRegistered($provider);
 
         // If the application has already booted, we will call this boot method on
