@@ -5,6 +5,7 @@ namespace Illuminate\Tests\Foundation;
 use Mockery as m;
 use PHPUnit\Framework\TestCase;
 use Illuminate\Foundation\Application;
+use Illuminate\Config\Repository as ConfigRepository;
 
 class FoundationApplicationTest extends TestCase
 {
@@ -46,6 +47,37 @@ class FoundationApplicationTest extends TestCase
         $app->register($provider);
 
         $this->assertTrue(in_array($class, $app->getLoadedProviders()));
+    }
+
+    public function testServiceProvidersAreCorrectlyRegisteredForEnvironment()
+    {
+        $provider1 = m::mock('Illuminate\Support\ServiceProvider');
+        $class1 = get_class($provider1);
+        $provider1->shouldReceive('register')->twice();
+
+        $provider2 = m::mock('Illuminate\Support\ServiceProvider');
+        $class2 = get_class($provider2);
+        $provider2->shouldReceive('register')->once();
+
+        $config = new ConfigRepository([
+            'app' => [
+                'providers' => [$class1],
+                'foo_providers' => [$class2],
+            ]
+        ]);
+        
+        $app = new Application;
+        $app['config'] = $config;
+        $app['env'] = 'bar';
+
+        $app->registerConfiguredProviders();
+        $this->assertTrue(in_array($class1, $app->getLoadedProviders()));
+        $this->assertFalse(in_array($class2, $app->getLoadedProviders()));
+
+        $app['env'] = 'foo';
+        $app->registerConfiguredProviders();
+        $this->assertTrue(in_array($class1, $app->getLoadedProviders()));
+        $this->assertTrue(in_array($class2, $app->getLoadedProviders()));
     }
 
     public function testDeferredServicesMarkedAsBound()
