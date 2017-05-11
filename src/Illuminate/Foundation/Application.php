@@ -545,8 +545,13 @@ class Application extends Container implements ApplicationContract, HttpKernelIn
      */
     public function registerConfiguredProviders()
     {
+        $providers = array_unique(array_merge(
+            $this->config['app.providers'],
+            $this->config->get('app.'.Str::snake($this['env']).'_providers', [])
+        ));
+        
         (new ProviderRepository($this, new Filesystem, $this->getCachedServicesPath()))
-                    ->load($this->config['app.providers']);
+            ->load($providers);
     }
 
     /**
