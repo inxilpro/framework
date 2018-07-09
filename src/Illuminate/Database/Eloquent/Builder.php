@@ -4,20 +4,19 @@ namespace Illuminate\Database\Eloquent;
 
 use Closure;
 use BadMethodCallException;
+use Illuminate\Contracts\Database\Builder as BuilderContract;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Concerns\BuildsQueries;
+use Illuminate\Database\Concerns\DecoratesQueryBuilder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 
-/**
- * @mixin \Illuminate\Database\Query\Builder
- */
-class Builder
+class Builder implements BuilderContract
 {
-    use BuildsQueries, Concerns\QueriesRelationships;
+    use BuildsQueries, Concerns\QueriesRelationships, DecoratesQueryBuilder;
 
     /**
      * The base query builder instance.
@@ -1316,15 +1315,5 @@ class Builder
         }
 
         return call_user_func_array(static::$macros[$method], $parameters);
-    }
-
-    /**
-     * Force a clone of the underlying query builder when cloning.
-     *
-     * @return void
-     */
-    public function __clone()
-    {
-        $this->query = clone $this->query;
     }
 }

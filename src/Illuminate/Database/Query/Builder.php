@@ -3,6 +3,7 @@
 namespace Illuminate\Database\Query;
 
 use Closure;
+use Illuminate\Contracts\Database\Builder as BuilderContract;
 use RuntimeException;
 use BadMethodCallException;
 use Illuminate\Support\Arr;
@@ -18,7 +19,7 @@ use Illuminate\Database\Query\Grammars\Grammar;
 use Illuminate\Database\Query\Processors\Processor;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 
-class Builder
+class Builder implements BuilderContract
 {
     use BuildsQueries, Macroable {
         __call as macroCall;
