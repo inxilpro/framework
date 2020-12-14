@@ -518,8 +518,8 @@ trait MakesHttpRequests
         $kernel->terminate($request, $response);
 
         if ($this->followRedirects) {
-            $this->followRedirects = false;
-            $response = $this->followRedirects($response);
+            return $this->createTestResponse($this->followRedirects($response))
+                ->withRedirectChain($this->lastRedirectChain);
         }
 
         return $this->createTestResponse($response);
@@ -650,6 +650,6 @@ trait MakesHttpRequests
      */
     protected function createTestResponse($response)
     {
-        return TestResponse::fromBaseResponse($response)->withRedirectChain($this->lastRedirectChain);
+        return TestResponse::fromBaseResponse($response);
     }
 }
