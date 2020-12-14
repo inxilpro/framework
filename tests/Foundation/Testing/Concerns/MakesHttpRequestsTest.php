@@ -2,7 +2,6 @@
 
 namespace Illuminate\Tests\Foundation\Testing\Concerns;
 
-use Closure;
 use Illuminate\Contracts\Routing\Registrar;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
@@ -121,39 +120,44 @@ class MakesHttpRequestsTest extends TestCase
 
     public function testFollowingRedirects()
     {
-        $this->withoutExceptionHandling();
         $router = $this->app->make(Registrar::class);
         $url = $this->app->make(UrlGenerator::class);
 
-        $last_request = null;
-        $middleware_terminations = [];
-        MyTerminatingMiddleware::onTerminate(function() use (&$middleware_terminations, &$last_request) {
-            $middleware_terminations[] = $last_request;
+        $router->get('from', function () use ($url) {
+            return new RedirectResponse($url->to('to'));
         });
 
-        $router->get('test-redirect-from', function() use ($url, &$last_request) {
-            $last_request = 'test-redirect-from';
-            return new RedirectResponse($url->to('test-redirect-intermediate'));
-        })->middleware(MyTerminatingMiddleware::class);
-
-        $router->get('test-redirect-intermediate', function() use ($url, &$last_request) {
-            $last_request = 'test-redirect-intermediate';
-            return new RedirectResponse($url->to('test-redirect-to'));
-        })->middleware(MyTerminatingMiddleware::class);
-
-        $router->get('test-redirect-to', function() use (&$last_request) {
-            $last_request = 'test-redirect-to';
+        $router->get('to', function () {
             return 'OK';
-        })->middleware(MyTerminatingMiddleware::class);
+        });
 
-        $response = $this->followingRedirects()->get('test-redirect-from');
+        $this->followingRedirects()
+            ->get('from')
+            ->assertOk()
+            ->assertSee('OK');
+    }
 
-        dump($middleware_terminations);
+    public function testFollowingRedirectsTerminatesInExpectedOrder()
+    {
+        $router = $this->app->make(Registrar::class);
+        $url = $this->app->make(UrlGenerator::class);
 
-        $response->assertOk();
-        $response->assertSeeText('OK');
-        $response->assertRedirectedTo('test-redirect-to');
-        $response->assertRedirectedThrough('test-redirect-intermediate');
+        $callOrder = [];
+        TerminatingMiddleware::$callback = function ($request) use (&$callOrder) {
+            $callOrder[] = $request->path();
+        };
+
+        $router->get('from', function () use ($url) {
+            return new RedirectResponse($url->to('to'));
+        })->middleware(TerminatingMiddleware::class);
+
+        $router->get('to', function () {
+            return 'OK';
+        })->middleware(TerminatingMiddleware::class);
+
+        $this->followingRedirects()->get('from');
+
+        $this->assertEquals(['from', 'to'], $callOrder);
     }
 }
 
@@ -165,24 +169,17 @@ class MyMiddleware
     }
 }
 
-class MyTerminatingMiddleware
+class TerminatingMiddleware
 {
-    public static $onTerminate;
-
-    public static function onTerminate($callback)
-    {
-        static::$onTerminate = $callback;
-    }
+    public static $callback;
 
     public function handle($request, $next)
     {
         return $next($request);
     }
 
-    public function terminate()
+    public function terminate($request, $response)
     {
-        if (static::$onTerminate instanceof Closure) {
-            call_user_func(static::$onTerminate);
-        }
+        call_user_func(static::$callback, $request, $response);
     }
 }
