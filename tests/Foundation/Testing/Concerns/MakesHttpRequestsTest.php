@@ -2,6 +2,10 @@
 
 namespace Illuminate\Tests\Foundation\Testing\Concerns;
 
+use Closure;
+use Illuminate\Contracts\Routing\Registrar;
+use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Http\RedirectResponse;
 use Orchestra\Testbench\TestCase;
 
 class MakesHttpRequestsTest extends TestCase
@@ -114,6 +118,43 @@ class MakesHttpRequestsTest extends TestCase
         $this->defaultCookies = ['foo' => 'bar'];
         $this->assertSame(['foo' => 'bar'], $this->prepareCookiesForJsonRequest());
     }
+
+    public function testFollowingRedirects()
+    {
+        $this->withoutExceptionHandling();
+        $router = $this->app->make(Registrar::class);
+        $url = $this->app->make(UrlGenerator::class);
+
+        $last_request = null;
+        $middleware_terminations = [];
+        MyTerminatingMiddleware::onTerminate(function() use (&$middleware_terminations, &$last_request) {
+            $middleware_terminations[] = $last_request;
+        });
+
+        $router->get('test-redirect-from', function() use ($url, &$last_request) {
+            $last_request = 'test-redirect-from';
+            return new RedirectResponse($url->to('test-redirect-intermediate'));
+        })->middleware(MyTerminatingMiddleware::class);
+
+        $router->get('test-redirect-intermediate', function() use ($url, &$last_request) {
+            $last_request = 'test-redirect-intermediate';
+            return new RedirectResponse($url->to('test-redirect-to'));
+        })->middleware(MyTerminatingMiddleware::class);
+
+        $router->get('test-redirect-to', function() use (&$last_request) {
+            $last_request = 'test-redirect-to';
+            return 'OK';
+        })->middleware(MyTerminatingMiddleware::class);
+
+        $response = $this->followingRedirects()->get('test-redirect-from');
+
+        dump($middleware_terminations);
+
+        $response->assertOk();
+        $response->assertSeeText('OK');
+        $response->assertRedirectedTo('test-redirect-to');
+        $response->assertRedirectedThrough('test-redirect-intermediate');
+    }
 }
 
 class MyMiddleware
@@ -121,5 +162,27 @@ class MyMiddleware
     public function handle($request, $next)
     {
         return $next($request.'WithMiddleware');
+    }
+}
+
+class MyTerminatingMiddleware
+{
+    public static $onTerminate;
+
+    public static function onTerminate($callback)
+    {
+        static::$onTerminate = $callback;
+    }
+
+    public function handle($request, $next)
+    {
+        return $next($request);
+    }
+
+    public function terminate()
+    {
+        if (static::$onTerminate instanceof Closure) {
+            call_user_func(static::$onTerminate);
+        }
     }
 }

@@ -48,6 +48,13 @@ trait MakesHttpRequests
     protected $followRedirects = false;
 
     /**
+     * When following redirects, this holds the URLs that were followed.
+     *
+     * @var array
+     */
+    protected $lastRedirectChain = [];
+
+    /**
      * Indicates whether cookies should be encrypted.
      *
      * @var bool
@@ -508,11 +515,12 @@ trait MakesHttpRequests
             $request = Request::createFromBase($symfonyRequest)
         );
 
+        $kernel->terminate($request, $response);
+
         if ($this->followRedirects) {
+            $this->followRedirects = false;
             $response = $this->followRedirects($response);
         }
-
-        $kernel->terminate($request, $response);
 
         return $this->createTestResponse($response);
     }
@@ -624,10 +632,10 @@ trait MakesHttpRequests
     protected function followRedirects($response)
     {
         while ($response->isRedirect()) {
-            $response = $this->get($response->headers->get('Location'));
+            $location = $response->headers->get('Location');
+            $this->lastRedirectChain[] = $location;
+            $response = $this->get($location);
         }
-
-        $this->followRedirects = false;
 
         return $response;
     }
@@ -640,6 +648,6 @@ trait MakesHttpRequests
      */
     protected function createTestResponse($response)
     {
-        return TestResponse::fromBaseResponse($response);
+        return TestResponse::fromBaseResponse($response)->withRedirectChain($this->lastRedirectChain);
     }
 }
