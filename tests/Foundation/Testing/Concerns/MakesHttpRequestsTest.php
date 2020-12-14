@@ -124,6 +124,10 @@ class MakesHttpRequestsTest extends TestCase
         $url = $this->app->make(UrlGenerator::class);
 
         $router->get('from', function () use ($url) {
+            return new RedirectResponse($url->to('intermediate'));
+        });
+
+        $router->get('intermediate', function() use ($url) {
             return new RedirectResponse($url->to('to'));
         });
 
@@ -133,6 +137,8 @@ class MakesHttpRequestsTest extends TestCase
 
         $this->followingRedirects()
             ->get('from')
+            ->assertRedirectedTo('to')
+            ->assertRedirectedThrough('intermediate')
             ->assertOk()
             ->assertSee('OK');
     }
