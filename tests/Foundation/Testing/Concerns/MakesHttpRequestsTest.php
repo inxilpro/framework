@@ -138,7 +138,7 @@ class MakesHttpRequestsTest extends TestCase
 
         $this->get('set-cookies');
 
-        $this->usingCookiesFromLastResponse();
+        $this->withResponseCookies();
 
         // Ensure that cookies set in the response to get('set-cookies')
         // are prepared for the next request
@@ -148,10 +148,10 @@ class MakesHttpRequestsTest extends TestCase
         $this->assertEquals('expiring-value', $cookies['expiring-cookie']);
 
         // Ensure that calling ignoringCookiesFromLastResponse() disables this
-        $this->ignoringCookiesFromLastResponse();
+        $this->withoutResponseCookies();
         $this->assertEmpty($this->prepareCookiesForRequest());
 
-        $this->usingCookiesFromLastResponse();
+        $this->withResponseCookies();
 
         // Time-travel past the expiration of the "expiring-cookie"
         // and ensure it won't be used for the next request
@@ -163,7 +163,7 @@ class MakesHttpRequestsTest extends TestCase
 
         // Ensure that cookies that are "forgotten" (i.e. set to expire one
         // month in the past) are not used in the next request
-        $this->usingCookiesFromLastResponse()->get('forget-cookies');
+        $this->withResponseCookies()->get('forget-cookies');
         $cookies = $this->prepareCookiesForRequest();
         $this->assertArrayNotHasKey('encrypted-cookie', $cookies);
         $this->assertArrayNotHasKey('unencrypted-cookie', $cookies);

@@ -57,11 +57,18 @@ trait MakesHttpRequests
     protected $encryptCookies = true;
 
     /**
-     * Indicates whether cookies should be applied across requests similar to a browser.
+     * Indicates whether cookies from past requests should be used in future requests.
      *
      * @var bool
      */
-    protected $useCookiesFromLastResponse = false;
+    protected $useResponseCookies = false;
+
+    /**
+     * Cookies from previous responses to apply to future requests.
+     *
+     * @var bool
+     */
+    protected $responseCookies = [];
 
     /**
      * Indicated whether JSON requests should be performed "with credentials" (cookies).
@@ -71,13 +78,6 @@ trait MakesHttpRequests
      * @var bool
      */
     protected $withCredentials = false;
-
-    /**
-     * The last response returned from a HTTP request.
-     *
-     * @var TestResponse
-     */
-    protected $lastResponse;
 
     /**
      * Define additional headers to be sent with the request.
@@ -249,9 +249,9 @@ trait MakesHttpRequests
      *
      * @return $this
      */
-    public function usingCookiesFromLastResponse()
+    public function withResponseCookies()
     {
-        $this->useCookiesFromLastResponse = true;
+        $this->useResponseCookies = true;
 
         return $this;
     }
@@ -261,9 +261,9 @@ trait MakesHttpRequests
      *
      * @return $this
      */
-    public function ignoringCookiesFromLastResponse()
+    public function withoutResponseCookies()
     {
-        $this->useCookiesFromLastResponse = false;
+        $this->useResponseCookies = false;
 
         return $this;
     }
@@ -554,7 +554,7 @@ trait MakesHttpRequests
 
         $kernel->terminate($request, $response);
 
-        return $this->lastResponse = $this->createTestResponse($response);
+        return $this->handleResponse($response);
     }
 
     /**
@@ -652,7 +652,7 @@ trait MakesHttpRequests
      */
     protected function getUnencryptedCookies()
     {
-        return array_merge($this->getRawCookiesFromLastResponse(), $this->unencryptedCookies);
+        return array_merge($this->getResponseCookies(), $this->unencryptedCookies);
     }
 
     /**
@@ -660,13 +660,13 @@ trait MakesHttpRequests
      *
      * @return array
      */
-    protected function getRawCookiesFromLastResponse()
+    protected function getResponseCookies()
     {
-        if (! $this->useCookiesFromLastResponse || is_null($this->lastResponse)) {
+        if (! $this->useResponseCookies) {
             return [];
         }
 
-        return collect($this->lastResponse->headers->getCookies())
+        return collect($this->responseCookies)
             ->reject(function (Cookie $cookie) {
                 return 0 !== $cookie->getExpiresTime()
                     && Date::createFromTimestamp($cookie->getExpiresTime())->isPast();
@@ -702,6 +702,35 @@ trait MakesHttpRequests
         $this->followRedirects = false;
 
         return $response;
+    }
+
+
+    /**
+     * Save cookies from response for use in subsequent requests.
+     *
+     * @param \Illuminate\Http\Response $response
+     * @return $this
+     */
+    protected function mergeCookiesFromResponse($response)
+    {
+        foreach ($response->headers->getCookies() as $cookie) {
+            $this->responseCookies[$cookie->getName()] = $cookie;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Handle response before returning it.
+     *
+     * @param \Illuminate\Http\Response $response
+     * @return \Illuminate\Testing\TestResponse
+     */
+    protected function handleResponse($response)
+    {
+        $this->mergeCookiesFromResponse($response);
+
+        return $this->createTestResponse($response);
     }
 
     /**
